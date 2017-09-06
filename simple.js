@@ -22,7 +22,12 @@ When we pre-create a module when it appears as a dependency, maybe we also just 
 
 So, new Module --> registers it
 
-
+new app.Module({
+	deps: [],
+	run: function(){
+	
+	}
+});
 
 
 
