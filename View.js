@@ -1,19 +1,4 @@
-app.module("View", [], function(){
-
-var Base2 = Base.extend();
-Base2.extend = function(){
-	var Ext = function Ext(){
-		if (!(this instanceof Ext))
-			return new (Ext.bind.apply(Ext, [null].concat([].slice.call(arguments))));
-		this.instantiate.apply(this, arguments);
-	};
-	Ext.assign = this.assign;
-	Ext.assign(this);
-	Ext.prototype = Object.create(this.prototype);
-	Ext.prototype.constructor = Ext;
-	Ext.prototype.assign.apply(Ext.prototype, arguments);
-	return Ext;
-};
+app.module("View.js", [], function(){
 
 var View = Base2.extend({
 	instantiate: function(){
@@ -23,23 +8,16 @@ var View = Base2.extend({
 			this.append.apply(this, arguments);
 		} else {
 			this.assign.apply(this, arguments);
-			this.initialize(true);
+			this.initialize();
 		}
 	},
-	initialize: function(capture){
+	initialize: function(){
 		this.render_el();
 		this.getCaptured();
-
-		if (capture){
-			this.becomeCaptor();
-		}
-
+		this.becomeCaptor();
 		this.render();
 		this.update();
-
-		if (capture){
-			this.restoreCaptor();
-		}
+		this.restoreCaptor();
 	},
 	render_el: function(){
 		this.tag = this.tag || "div";
@@ -48,6 +26,9 @@ var View = Base2.extend({
 		if (this.name)
 			this.addClass(this.name);
 
+		if (this.type)
+			this.addClass(this.type);
+
 		if (this.classes)
 			this.addClass.apply(this, this.classes.split(" "));
 	},
@@ -55,6 +36,10 @@ var View = Base2.extend({
 		for (var i = 0; i < arguments.length; i++){
 			this.el.classList.add(arguments[i]);
 		}
+		return this;
+	},
+	attr: function(name, value){
+		this.el.setAttribute(name, value);
 		return this;
 	},
 	click: function(cb){

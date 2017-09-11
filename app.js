@@ -91,6 +91,21 @@ Base.extend = function(){
 	return Ext;
 };
 
+var Base2 = window.Base2 = Base.extend();
+Base2.extend = function(){
+	var Ext = function Ext(){
+		if (!(this instanceof Ext))
+			return new (Ext.bind.apply(Ext, [null].concat([].slice.call(arguments))));
+		this.instantiate.apply(this, arguments);
+	};
+	Ext.assign = this.assign;
+	Ext.assign(this);
+	Ext.prototype = Object.create(this.prototype);
+	Ext.prototype.constructor = Ext;
+	Ext.prototype.assign.apply(Ext.prototype, arguments);
+	return Ext;
+};
+
 var app = window.app = {
 	initialize: function(){
 		this.modules = new Modules({
@@ -159,11 +174,12 @@ var Module = Base.extend({
 	},
 	request: function(){
 		this.script = document.createElement("script");
-		this.script.src = this.name + ".js";
+		this.script.src = "/" + this.name;
 		document.head.appendChild(this.script);
 	},
 	dep: function(name){
 		var dep = this.modules.get(name);
+		dep.isDep = true;
 		this.deps.push(dep);
 		if (!dep.defined)
 			dep.request();
@@ -201,12 +217,12 @@ var Module = Base.extend({
 	exec: function(){
 		// exec 
 		this.isLoaded = true;
-		console.group(this.name, this.args());
+		if (!this.isDep) console.group(this.name);
 		this.value = this.fn.apply(null, this.args());
+		if (!this.isDep) console.groupEnd();
 		this.executed = true;
 		this.execCBs();
 		this.finished = true;
-		console.groupEnd();
 	},
 	args: function(){
 		var dep, args = [];
