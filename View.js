@@ -1,28 +1,44 @@
 app.module("View", [], function(){
 
-var View = Base.extend({
+var Base2 = Base.extend();
+Base2.extend = function(){
+	var Ext = function Ext(){
+		if (!(this instanceof Ext))
+			return new (Ext.bind.apply(Ext, [null].concat([].slice.call(arguments))));
+		this.instantiate.apply(this, arguments);
+	};
+	Ext.assign = this.assign;
+	Ext.assign(this);
+	Ext.prototype = Object.create(this.prototype);
+	Ext.prototype.constructor = Ext;
+	Ext.prototype.assign.apply(Ext.prototype, arguments);
+	return Ext;
+};
+
+var View = Base2.extend({
 	instantiate: function(){
-		this.assign.apply(this, arguments);
-		this.initialize();
+		if (this._auto_append){
+			// console.warn("can't really use the .render function with this pattern");
+			this.initialize();
+			this.append.apply(this, arguments);
+		} else {
+			this.assign.apply(this, arguments);
+			this.initialize(true);
+		}
 	},
-	initialize: function(){
-		var args = this.args.apply(this, arguments);
+	initialize: function(capture){
 		this.render_el();
-			this.getCaptured();
-		this.pre_render();
-		this.render.apply(this, args);
+		this.getCaptured();
+
+		if (capture){
+			this.becomeCaptor();
+		}
+
+		this.render();
+		this.update();
+
+		if (capture){
 			this.restoreCaptor();
-	},
-	args: function(token){
-		if (is.str(token) && !/\s/.test(token)){
-			// first arg is string with no whitespace
-			
-			// if (token[0] === "."){}
-
-			if (!this.tag){
-				// token might start with a valid element
-
-			}
 		}
 	},
 	render_el: function(){
@@ -41,9 +57,45 @@ var View = Base.extend({
 		}
 		return this;
 	},
-	render: function(){
-		this.append.apply(this, arguments);
+	click: function(cb){
+		this.el.addEventListener("click", cb.bind(this));
+		return this;
 	},
+	removeClass: function(className){
+		this.el.classList.remove(className);
+		return this;
+	},
+	hasClass: function(className){
+		return this.el.classList.contains(className);
+	},
+	empty: function(){
+		this.el.innerHTML = "";
+		return this;
+	},
+	focus: function(){
+		this.el.focus();
+		return this;
+	},
+	show: function(){
+		this.el.style.display = "";
+		return this;
+	},
+	style: function(){
+		return getComputedStyle(this.el);
+	},
+	toggle: function(){
+		if (this.style().display === "none")
+			return this.show();
+		else {
+			return this.hide();
+		}
+	},
+	hide: function(){
+		this.el.style.display = "none";
+		return this;
+	},
+	render: function(){},
+	update: function(){},
 	getCaptured: function(){
 		if (View.captor){
 			View.captor.append(this);
@@ -53,84 +105,29 @@ var View = Base.extend({
 		View.previousCaptor = View.captor;
 		View.captor = this;
 	},
-	post_render: function(){
-		this.restoreCaptor();
-	},
 	restoreCaptor: function(){
 		View.captor = View.previousCaptor;
-	}
-}).assign({
-	// extend: function(){
-	// 	var Ext = Base.extend.apply(this, arguments);
-	// 	Ext.extend_View();
-	// 	return Ext;
-	// }
-});
-
-View.V = View.extend({
-	instantiate: function(){
-		this.initialize.apply(this, arguments);
-	}
-});
-
-var validElements = ["div", "p", "span", "h1"];
-
-var tokens = [
-	{
-		token: "span",
-		tag: "span",
-		classes: ""
 	},
-	{
-		token: "hello",
-		tag: "",
-		classes: ""
-	},
-	{
-		token: "p.yo",
-		tag: "p",
-		classes: "yo"
-	},
-	{
-		token: "p.yo.mo",
-		tag: "p",
-		classes: "yo mo"
-	},
-	{
-		token: ".one.two",
-		classes: "one two"
-	}
-];
-
-var tokenToProps = function(token){
-	var result = {};
-	token = token.split(".");
-	if (token[0] === ""){
-		return {
-			classes: token.slice(1).join(" ")
-		};
-	} else if (validElements.indexOf(token[0]) > -1){
-		// token starts with an element
-		return {
-			tag: token[0],
-			classes: token.slice(1).join(" ")
-		};
-	} else {
-		return {
-			tag: "",
-			classes: ""
+	append: function(){
+		var arg;
+		for (var i = 0; i < arguments.length; i++){
+			arg = arguments[i];
+			if (arg && arg.el){
+				this.el.appendChild(arg.el);
+			} else if (is.fn(arg)){
+				this.becomeCaptor();
+				arg.call(this);
+				this.restoreCaptor();
+			} else  {
+				// dom and strings
+				this.el.append(arg);
+			}
 		}
+		return this;
 	}
-};
+});
 
-var res;
-for (var i = 0; i < tokens.length; i++){
-	console.group(tokens[i])
-	res = tokenToProps(tokens[i].token);
-	console.assert(tokens[i].tag === res.tag);
-	console.assert(tokens[i].classes === res.classes);
-	console.groupEnd();
-}
+
 
 return View;
 

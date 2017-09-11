@@ -1,6 +1,71 @@
 /*
 
 
+View.V = View.extend({
+	instantiate: function(){
+		this.initialize.apply(this, arguments);
+	}
+});
+
+var validElements = ["div", "p", "span", "h1"];
+
+var tokens = [
+	{
+		token: "span",
+		tag: "span",
+		classes: ""
+	},
+	{
+		token: "hello",
+		tag: "",
+		classes: ""
+	},
+	{
+		token: "p.yo",
+		tag: "p",
+		classes: "yo"
+	},
+	{
+		token: "p.yo.mo",
+		tag: "p",
+		classes: "yo mo"
+	},
+	{
+		token: ".one.two",
+		classes: "one two"
+	}
+];
+
+var tokenToProps = function(token){
+	var result = {};
+	token = token.split(".");
+	if (token[0] === ""){
+		return {
+			classes: token.slice(1).join(" ")
+		};
+	} else if (validElements.indexOf(token[0]) > -1){
+		// token starts with an element
+		return {
+			tag: token[0],
+			classes: token.slice(1).join(" ")
+		};
+	} else {
+		return {
+			tag: "",
+			classes: ""
+		}
+	}
+};
+
+var res;
+for (var i = 0; i < tokens.length; i++){
+	console.group(tokens[i])
+	res = tokenToProps(tokens[i].token);
+	console.assert(tokens[i].tag === res.tag);
+	console.assert(tokens[i].classes === res.classes);
+	console.groupEnd();
+}
+
 
 
 
