@@ -1,1 +1,3 @@
-var test = 123;
+app.module("root", ["View"], function(View){
+	console.log("root", View);
+});
