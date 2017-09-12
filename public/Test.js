@@ -13,7 +13,12 @@ app.module("Test.js", ["View.js"], function(View){
 		render: function(){
 			this.$bar = View().addClass("bar").append(
 				this.$name = View().addClass("name").append(this.label()),
-				this.$run = View({tag: "button"}).addClass("run").append("run")
+				this.$run = View({tag: "button", test: this}).addClass("run").append("run")
+					.click(function(){
+						window.location.hash = this.test.testName;
+						window.location.reload();
+
+					})
 			);
 
 			this.$content = View({test: this}).addClass("content");
@@ -30,6 +35,10 @@ app.module("Test.js", ["View.js"], function(View){
 				this.$content.becomeCaptor();
 				this.fn();
 				this.$content.restoreCaptor();
+				if (this.pass > 0)
+					this.$footer.append("Passed " + this.pass);
+				if (this.fail > 0)
+					this.$footer.append("Failed " + this.fail);
 				console.groupEnd();
 			}
 		},
@@ -45,7 +54,7 @@ app.module("Test.js", ["View.js"], function(View){
 			return !window.location.hash || this.match();
 		},
 		match: function(){
-			return window.location.hash.substring(1) === this.name;
+			return window.location.hash.substring(1) === this.testName;
 		},
 	});
 

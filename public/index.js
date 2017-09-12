@@ -1,4 +1,8 @@
-app.module("index.js", ["View.js", "Test.js"], function(View){
+app.module("index.js", ["View.js", "Test.js", "CSS.js"], function(View, Test, CSS){
+
+	var styles = new CSS();
+	styles.select("body", "background: blue;");
+	styles.inject();
 
 	console.log("this is index.js");
 	var p = View.extend({
@@ -9,10 +13,15 @@ app.module("index.js", ["View.js", "Test.js"], function(View){
 
 	var v = View().addClass("app").append(function(){
 		p().append("hello world");
-		p("hello world");
+		p("hello worldz2s4aab");
 
 		test("this is just a test", function(){
+			console.log("woooohoooo wezeee");
+		});
+		test("another test", function(){
 			console.log("woooohoooo weeee");
+			assert("okzz");
+			assert("ok" === "not ok");
 		});
 	});
 
