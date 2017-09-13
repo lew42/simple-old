@@ -1,4 +1,6 @@
-app.module("Test.js", ["View.js"], function(View){
+app.module("Test.js", ["View.js", "Test.styles.js"], function(View, styles){
+	styles.inject();
+	
 	var Test = window.test = View.extend({
 		type: "test",
 		instantiate: function(name, fn){
