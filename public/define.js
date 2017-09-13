@@ -21,10 +21,10 @@ Base.assign = function(){
 
 Base.prototype.assign = Base.assign;
 Base.prototype.instantiate = function(){
-	this.assign.apply(this, arguments);
-	this.initialize();
+	// this.assign.apply(this, arguments);
+	// this.initialize();
 };
-Base.prototype.initialize = function(){};
+// Base.prototype.initialize = function(){};
 
 Base.extend = function(){
 	var Ext = function(){
@@ -39,57 +39,81 @@ Base.extend = function(){
 	return Ext;
 };
 
-var Module = Base.extend({
-	initialize: function(){
-		if (this.config) this.init_config();
-	},
-	init_config: function(){
-		if (this.config.id) this.id = this.config.id;
-		if (this.config.requires) this.dependencies = this.config.requires;
-		if (this.config.factory) this.factory = this.config.factory;
-	},
-	register: function(){
-		// should have ID, and optionally a basePath
-		// configRoot + basePath (defined by require) + 
-	},
-	requires: function(deps){
-		var arg;
-		for (var i = 0; i < arguments.length; i++){
-			arg = arguments[i];
-			if (is.arr(arg))
-				this.requires(arg);
-			else
-				this.require(arg);
-		}
-		return this;
-	},
-	require: function(dep){
-		// resolve path based on this.basePath
-		var mod = new Module({
 
-		});
+var modules = {};
+var Module = Base.extend({
+	instantiate: function(opts){
+		this.q = [];
+		this.deps = [];
+		this.dependents = [];
+	},
+	define: function(opts){
+		this.assign(opts);
+
+		for (var i = 0; i < this.dep_ids.length; i++)
+			this.require(this.dep_ids[i]);
+
+		if (!this.deps.length)
+			this.exec();
+
+		this.isDefined = true;
+	},
+	require: function(id){
+		// resolve path based on this.basePath
+		var module = modules[id] = modules[id] || new Module();
+		this.deps.push(module);
+		module.dependents.push(this);
+
+		if (!module.isExecuted)
+			this.q.push(module);
+
+		if (!module.isDefined)
+			module.request();
+	},
+	request: function(){
+		if (!this.isRequested){
+			this.script = document.createElement("script");
+			this.script.src = "/" + this.name + ".js";
+			document.head.appendChild(this.script);
+			this.isRequested = true;
+		}
+	},
+	exec: function(){
+		this.value = this.factory.apply(null, this.args());
+		this.pingback();
+	},
+	pingback: function(){
+
 	}
 });
 
+var getModule = function(id){
 
-define = function(id, deps, fn){
-	var arg, constructs = {};
+};
 
-	// is arg parsing outside the class cleaner?
-	// that allows Module({assign}) instead of Module([{assign}]) // as with new Module(arguments) pattern
+var define = window.define = function(id, deps, fn){
+	var args = {}, arg, module;
+
 	for (var i = 0; i < arguments.length; i++){
 		arg = arguments[i];
-		if (is.obj(arg))
-			constructs.config = arg;
-		else if (is.str(arg))
-			constructs.id = arg;
-		else if (is.arr(arg))
-			constructs.dependencies = arg;
-		else if (is.fn(arg))
-			constructs.factory = arg;
+		if (is.str(arg)){
+			args.id = arg;
+		} else if (is.arr(arg)){
+			args.deps = arg;
+		} else if (is.fn(arg)){
+			args.factory = arg;
+		}
 	}
 
-	return new Module(constructs); // return?  why not
+	module = modules[args.id] = modules[args.id] || new Module();
+	// module = getModule(args.id);
+	module.define(args);
+	return module;
+};
+
+define.modules = modules;
+define.get = function(id){
+
 };
 
 })();

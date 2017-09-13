@@ -202,6 +202,8 @@ var Module = Base.extend({
 			dep.request();
 	},
 	define: function(deps, fn){
+		this.loaded = true; // request completed..
+		
 		// called via the app.module interface method
 		this.fn = fn;
 		// must wait for all deps before executing this module
