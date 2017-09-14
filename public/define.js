@@ -2,6 +2,8 @@
  * window.define
  */
 
+console.log(document.currentScript);
+
 ;(function(){
 	
 var Base = function(){
@@ -49,11 +51,14 @@ var getModule = function(id){
 
 var Module = Base.extend({
 	instantiate: function(opts){
-		this.deps = []; // dependencies
+		this.dep_ids = []; // array of dep ids (strings)
+		this.deps = []; // dependencies (Module instances)
 		this.dependents = [];
 	},
 	define: function(opts){
 		this.assign(opts);
+
+		this.register();
 
 		for (var i = 0; i < this.dep_ids.length; i++)
 			this.require(this.dep_ids[i]);
@@ -70,11 +75,34 @@ var Module = Base.extend({
 		// used to generate the .factory args
 		this.deps.push(module);
 
-		// used to notify dependents that we've finished
-		module.dependents.push(this);
+		// dependencies are registered based on parent module's path
+		module.register(this);
 
 		if (!module.defined)
 			module.request();
+	},
+	register: function(parent){
+		if (!this.registered){
+
+			// this is called from .require(parent) and .define(), with and without a parent
+				// but, it should only be registered once
+				// it may have been registered before defined
+					// in this case, we have a parent
+				// it may be defined without being registered
+					// in this case, we have no parent
+
+			if (parent){
+				// used to notify dependents that we've finished
+				this.dependents.push(parent);
+			}
+
+			// register path
+				// if parent, use parent + id
+
+				// what is the form of the path?
+
+			this.registered = true;
+		}
 	},
 	request: function(){
 		if (!this.isRequested){
@@ -128,6 +156,7 @@ var Module = Base.extend({
 });
 
 var define = window.define = function(id, deps, fn){
+	console.log(document.currentScript);
 	var args = {}, arg, module;
 
 	for (var i = 0; i < arguments.length; i++){
@@ -141,8 +170,7 @@ var define = window.define = function(id, deps, fn){
 		}
 	}
 
-	module = modules[args.id] = modules[args.id] || new Module();
-	// module = getModule(args.id);
+	module = getModule(args.id);
 	module.define(args);
 	return module;
 };
