@@ -30,7 +30,7 @@ Base.extend = function(){
 	var Ext = function(){
 		this.instantiate.apply(this, arguments);
 	};
-	Ext.assign = assign;
+	Ext.assign = this.assign;
 	Ext.assign(this);
 	Ext.prototype = Object.create(this.prototype);
 	Ext.prototype.constructor = Ext;
@@ -41,10 +41,15 @@ Base.extend = function(){
 
 
 var modules = {};
+
+var getModule = function(id){
+	// resolve paths and ids?
+	return (modules[id] = modules[id] || new Module()); 
+};
+
 var Module = Base.extend({
 	instantiate: function(opts){
-		this.q = [];
-		this.deps = [];
+		this.deps = []; // dependencies
 		this.dependents = [];
 	},
 	define: function(opts){
@@ -56,18 +61,19 @@ var Module = Base.extend({
 		if (!this.deps.length)
 			this.exec();
 
-		this.isDefined = true;
+		this.defined = true;
 	},
 	require: function(id){
 		// resolve path based on this.basePath
-		var module = modules[id] = modules[id] || new Module();
+		var module = getModule(id);
+
+		// used to generate the .factory args
 		this.deps.push(module);
+
+		// used to notify dependents that we've finished
 		module.dependents.push(this);
 
-		if (!module.isExecuted)
-			this.q.push(module);
-
-		if (!module.isDefined)
+		if (!module.defined)
 			module.request();
 	},
 	request: function(){
@@ -75,21 +81,51 @@ var Module = Base.extend({
 			this.script = document.createElement("script");
 			this.script.src = "/" + this.name + ".js";
 			document.head.appendChild(this.script);
-			this.isRequested = true;
+			this.requested = true;
 		}
 	},
-	exec: function(){
-		this.value = this.factory.apply(null, this.args());
-		this.pingback();
+	path: function(){
+		return this.id;
 	},
-	pingback: function(){
-
+	exec: function(){
+		if (!this.dependents.length) console.group(this.path());
+		this.value = this.factory.apply(null, this.args());
+		this.executed = true;
+		if (!this.dependents.length) console.groupEnd();
+		this.finish();
+	},
+	finish: function(){
+		for (var i = 0; i < this.dependents.length; i++){
+			this.dependents[i].update();
+		}
+		this.finished = true;
+	},
+	update: function(){
+		if (this.ready())
+			this.exec();
+	},
+	dq: function(dep){
+		// remove dep from the q?  is doing a bunch of array splices any faster?
+	},
+	ready: function(){
+		for (var i = 0; i < this.deps.length; i++){
+			if (!this.deps[i].executed)
+				return false;
+		}
+		return true;
+	},
+	args: function(){
+		var dep, args = [];
+		for (var i = 0; i < this.deps.length; i++){
+			dep = this.deps[i];
+			if (dep.executed)
+				args.push(dep.value);
+			else
+				throw "whoops";
+		}
+		return args;
 	}
 });
-
-var getModule = function(id){
-
-};
 
 var define = window.define = function(id, deps, fn){
 	var args = {}, arg, module;
@@ -112,8 +148,6 @@ var define = window.define = function(id, deps, fn){
 };
 
 define.modules = modules;
-define.get = function(id){
-
-};
+define.getModule = getModule;
 
 })();
