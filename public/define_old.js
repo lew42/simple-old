@@ -50,11 +50,14 @@ var getModule = function(id){
 };
 
 var Module = Base.extend({
-	instantiate: function(opts){
+	instantiate: function(){
+		this.assign.apply(this, arguments);
+
 		this.dep_ids = []; // array of dep ids (strings)
 		this.deps = []; // dependencies (Module instances)
 		this.dependents = [];
 	},
+	sub: function(){},
 	define: function(opts){
 		this.assign(opts);
 
@@ -174,6 +177,40 @@ var define = window.define = function(id, deps, fn){
 	module.define(args);
 	return module;
 };
+
+/*
+To keep define().define() working...
+But, that'll have to be mangled anyway, because we can't then have multiple define().define().define() at the same parent level.
+
+How about skip the whole root concept, and just go back to the new Module()?
+
+All new modules could be registered as root modules.
+
+Fark..  Not sure about this:
+* IDing modules?
+* Embedding sub modules vs Shared
+* How to cache and look up modules?
+
+
+Root modules might not need to be cached...
+
+*/
+
+var define2 = function(){
+	var script = document.currentScript,
+		module;
+	if (script && script.module){
+		module = script.module;
+	} else {
+		module = define.root.sub.apply(define.root, arguments);
+	}
+	module.define.apply(module, arguments);
+	return module;
+};
+
+define.root = new Module({
+
+});
 
 define.modules = modules;
 define.getModule = getModule;
