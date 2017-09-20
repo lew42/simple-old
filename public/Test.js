@@ -13,6 +13,17 @@ app.module("Test.js", ["View.js", "Test.styles.js"], function(View, styles){
 			this.initialize();
 		},
 		render: function(){
+			// this.append({
+			// 	bar: {
+			// 		name: this.label(),
+			// 		run: View.btn("run", {test:this}).click(function(){
+			// 			window.location.hash = this.test.testName;
+			// 			window.location.reload();
+			// 		})
+			// 	},
+			// 	content: View({test: this}),
+			// 	footer: {}
+			// });
 			this.$bar = View().addClass("bar").append(
 				this.$name = View().addClass("name").append(this.label()),
 				this.$run = View({tag: "button", test: this}).addClass("run").append("run")

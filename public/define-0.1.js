@@ -67,27 +67,10 @@ var Module = Base.extend({
 		this.dependents = [];
 	},
 	define: function(){
-		var arg;
-
 		this.log.group("define", this.id || document.currentScript.src);
-
-		for (var i = 0; i < arguments.length; i++){
-			arg = arguments[i];
-			if (is.arr(arg)){
-				arg.forEach(this.require.bind(this));
-				// this.require.apply(this, arg);
-			} else if (is.obj(arg)){
-				this.define_obj(arg);
-			} else if (is.fn(arg)){
-				this.factory = arg;
-			} else if (is.str(arg)){
-				this.id = arg;
-			}
-		}
-
+		this.define_args(arguments);
+		this.define_deps();
 		this.log.g("q", () => this.q.forEach((dep) => this.log(dep.id)));
-		// this.q.forEach((dep) => this.log(dep));
-
 		this.defined = true;
 
 		if (!this.q.length)
@@ -95,33 +78,52 @@ var Module = Base.extend({
 
 		this.log.end();
 	},
+	define_args: function(args){
+		var arg;
+		for (var i = 0; i < args.length; i++){
+			arg = args[i];
+			if (is.arr(arg)){
+				this.dep_ids = arg;
+			} else if (is.fn(arg)){
+				this.factory = arg;
+			} else if (is.str(arg)){
+				this.id = arg;
+			}
+		}
+	},
+	define_deps: function(){
+		this.dep_ids.forEach(function(dep_id){
+			this.require(dep_id);
+		}.bind(this));
+	},
 	resolve: function(token){
 		return "/modules/" + token + ".js";
 	},
-	require: function(token){
-		// resolve token based on this.path
-		var id = this.resolve(token),
-			module;
-		
+	load: function(id){
+		var module;
 		if (this.modules[id]){
 			module = this.modules[id];
 		} else {
 			module = this.modules[id] = new Module({
-				id: id,
-				parent: this,
-				token: token
+				id: id
 			});
 			module.request();
 		}
+		return module;
+	},
+	require: function(token){
+		// resolve token based on this.path
+		var id = this.resolve(token);
+		var module = this.load(id);
 
-		// the q represents awaiting deps
+		// all deps
+		this.deps.push(module);
+		
+		// awaiting deps
 		if (!module.executed)
 			this.q.push(module);
 
-		// used to generate the .factory args
-		this.deps.push(module);
-
-		// used to notify dependents when its ready
+		// deps track dependents, too
 		module.dependents.push(this);
 	},
 	request: function(){
