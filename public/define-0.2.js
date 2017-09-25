@@ -42,12 +42,13 @@ Base.extend = function(){
 
 var Module = Base.extend({
 	instantiate: function(id){
+		this.log = define.log;
 		this.id = id;
 		this.deps = []; // dependencies (Module instances)
 		this.dependents = [];
 	},
 	define: function(fn, deps){
-		this.log.group("define", this.id);
+		this.log.group("define", this.id, deps || []);
 
 		this.factory = fn;
 
@@ -62,7 +63,6 @@ var Module = Base.extend({
 	},
 	require: function(id){
 		var module = define.get(id);
-		console.time("require");
 
 		// all deps
 		this.deps.push(module);
@@ -78,8 +78,8 @@ var Module = Base.extend({
 			// used in global define() function as document.currentScript.module
 			this.script.module = this;
 
+			this.log("request", this.id);
 			this.requested = true;
-			this.log("requesting", this.id);
 			document.head.appendChild(this.script);
 		}
 	},
@@ -116,8 +116,6 @@ var Module = Base.extend({
 	}
 });
 
-logger.install(Module.prototype, true);
-
 var define = window.define = function(){
 	var args = define.args(arguments);
 	var script = document.currentScript; 
@@ -133,8 +131,10 @@ var define = window.define = function(){
 
 	return module.define(args.factory, args.deps);
 };
-
+define.log = log;
+define.debug = log.off;
 define.delayRequests = function(){
+	define.debug.time("define.requests timeout");
 	if (define.delayRequestsTimeout){
 		clearTimeout(define.delayRequestsTimeout);
 	}
@@ -166,11 +166,12 @@ define.args = function(argu){
 };
 
 define.requests = function(){
-	console.log("requests");
-	console.timeEnd("require");
-	for (var i in define.modules){
-		define.modules[i].request();
-	}
+	define.log.g("define.requests", function(){
+		define.log.timeEnd("define.requests timeout");
+		for (var i in define.modules){
+			define.modules[i].request();
+		}
+	});
 };
 
 /*
@@ -207,50 +208,50 @@ define.resolve = function(id){
 	return id;
 };
 
-[
-	{
-		id: "thing",
-		url: "/modules/thing.js"
-	},
-	{
-		id: "thing.js",
-		url: "/modules/thing.js"
-	},
-	{
-		id: "thing-0.1",
-		url: "/modules/thing-0.1.js"
-	},
-	{
-		id: "thing-0.1/",
-		url: "/modules/thing-0.1/thing-0.1.js"
-	},
-	{
-		id: "/thing",
-		url: "/thing.js"
-	},
-	{
-		id: "/thing-0.1",
-		url: "/thing-0.1.js"
-	},
-	{
-		id: "/thing.js",
-		url: "/thing.js"
-	},
-	{
-		id: "/thing-0.1.js",
-		url: "/thing-0.1.js"
-	},
-	{
-		id: "/thing/",
-		url: "/thing/thing.js"
-	},
-	{
-		id: "/thing-0.1/",
-		url: "/thing-0.1/thing-0.1.js"
-	}
-].forEach((test)=>{
-	console.assert(define.resolve(test.id) === test.url);
-	console.log("done");
-});
+// [
+// 	{
+// 		id: "thing",
+// 		url: "/modules/thing.js"
+// 	},
+// 	{
+// 		id: "thing.js",
+// 		url: "/modules/thing.js"
+// 	},
+// 	{
+// 		id: "thing-0.1",
+// 		url: "/modules/thing-0.1.js"
+// 	},
+// 	{
+// 		id: "thing-0.1/",
+// 		url: "/modules/thing-0.1/thing-0.1.js"
+// 	},
+// 	{
+// 		id: "/thing",
+// 		url: "/thing.js"
+// 	},
+// 	{
+// 		id: "/thing-0.1",
+// 		url: "/thing-0.1.js"
+// 	},
+// 	{
+// 		id: "/thing.js",
+// 		url: "/thing.js"
+// 	},
+// 	{
+// 		id: "/thing-0.1.js",
+// 		url: "/thing-0.1.js"
+// 	},
+// 	{
+// 		id: "/thing/",
+// 		url: "/thing/thing.js"
+// 	},
+// 	{
+// 		id: "/thing-0.1/",
+// 		url: "/thing-0.1/thing-0.1.js"
+// 	}
+// ].forEach((test)=>{
+// 	console.assert(define.resolve(test.id) === test.url);
+// 	console.log("done");
+// });
 
 })();
