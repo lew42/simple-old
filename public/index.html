@@ -1,6 +1,12 @@
 <!doctype html>
 <html>
 <head>
+<script>
+console.time("domready");
+document.addEventListener("DOMContentLoaded", function(){
+	console.timeEnd("domready");
+	});
+	</script>
 	<script src="/logger.js"></script>
 	<script src="/define-0.2.js"></script>
 	<script src="index.js"></script>
