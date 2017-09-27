@@ -1,0 +1,40 @@
+Visualize
+* create views for the modules
+* visualize the define() and module.* calls, requests, with timelines, etc
+* 
+
+Optional Instrumentation
+* the above views should be removeable
+* maybe this is done with separate branches, and micro managing them
+* maybe this is done with semi-efficient noops
+
+Super Simple Views
+* no capturing
+* just .render() and .append()
+* maybe:
+
+this.append(
+	this.bar = View().addClass("bar"),
+	this.content = View({test: this}).addClass("content"),
+
+)
+
+What if append_obj is literally just:
+
+View().addClass(propName).append(value)
+
+Instead of rooting the references, you just access things via the hierarchy:
+
+this.bar.name
+this.bar.run
+
+
+
+this.append({
+	autoView: {
+
+	},
+	manualView: View({refs, props, methods}).append({
+		// nearly the same as above...
+	})
+})

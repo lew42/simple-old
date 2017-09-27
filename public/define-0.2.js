@@ -8,7 +8,7 @@ var Base = function(){
 	this.instantiate.apply(this, arguments);
 };
 
-Base.assign = function(){
+var assign = Base.assign = Base.prototype.assign = function(){
 	var arg;
 	for (var i = 0; i < arguments.length; i++){
 		arg = arguments[i];
@@ -19,12 +19,7 @@ Base.assign = function(){
 	return this;
 };
 
-Base.prototype.assign = Base.assign;
-Base.prototype.instantiate = function(){
-	// this.assign.apply(this, arguments);
-	// this.initialize();
-};
-// Base.prototype.initialize = function(){};
+Base.prototype.instantiate = function(){};
 
 Base.extend = function(){
 	var Ext = function(){
@@ -43,12 +38,16 @@ Base.extend = function(){
 var Module = Base.extend({
 	instantiate: function(id){
 		this.log = define.log;
+		this.debug = define.debug;
+
 		this.id = id;
 		this.deps = []; // dependencies (Module instances)
 		this.dependents = [];
+
+		this.views = [];
 	},
 	define: function(fn, deps){
-		this.log.group("define", this.id, deps || []);
+		this.debug.group("define", this.id, deps || []);
 
 		this.factory = fn;
 
@@ -59,7 +58,7 @@ var Module = Base.extend({
 
 		this.exec();
 
-		this.log.end();
+		this.debug.end();
 	},
 	require: function(id){
 		var module = define.get(id);
@@ -70,6 +69,9 @@ var Module = Base.extend({
 		// deps track dependents, too
 		module.dependents.push(this);
 	},
+	/**
+	 * All requests get delayed.  See define(), define.delayRequests(), and define.requests()
+	 */
 	request: function(){
 		if (!this.defined && !this.requested){
 			this.script = document.createElement("script");
@@ -78,7 +80,7 @@ var Module = Base.extend({
 			// used in global define() function as document.currentScript.module
 			this.script.module = this;
 
-			this.log("request", this.id);
+			this.debug("request", this.id);
 			this.requested = true;
 			document.head.appendChild(this.script);
 		}
@@ -90,11 +92,11 @@ var Module = Base.extend({
 			console.error("whoops");
 		
 		if (args){
-			this.log.group("exec", this.id);
+			!this.dependents.length && this.log.group(this.id, this.deps.map(function(dep){ return dep.id }));
 			this.value = this.factory.apply(null, args);
 			this.executed = true;
 			// if (!this.dependents.length) console.groupEnd();
-			this.log.end();
+			!this.dependents.length && this.log.end();
 			this.finish();
 		}
 	},
@@ -113,6 +115,21 @@ var Module = Base.extend({
 				return false;
 		}
 		return args;
+	},
+	render: function(){
+		var view;
+		if (this.View){
+			view = new this.View({
+				module: this
+			});
+			this.views.push(view);
+			return view;
+		}
+		return false;
+
+		// then
+
+		this.views.forEach((view) => view.update());
 	}
 });
 
@@ -120,138 +137,99 @@ var define = window.define = function(){
 	var args = define.args(arguments);
 	var script = document.currentScript; 
 	var module;
+	var a;
 
 	if (args.id){
 		module = define.get(args.id);
 	} else if (script && script.module){
 		module = script.module;
+	} else {
+		a = document.createElement("a");
+		a.href = script.src;
+		module = new define.Module(a.pathname);
 	}
 
 	define.delayRequests();
 
 	return module.define(args.factory, args.deps);
 };
-define.log = log;
-define.debug = log.off;
-define.delayRequests = function(){
-	define.debug.time("define.requests timeout");
-	if (define.delayRequestsTimeout){
-		clearTimeout(define.delayRequestsTimeout);
-	}
-	define.delayRequestsTimeout = setTimeout(define.requests, 0);
-};
 
-define.moduleRoot = "modules";
+define.assign = assign;
 
-var modules = define.modules = {};
-
-define.get = function(id){
-	return (modules[id] = modules[id] || new Module(id));
-};
-
-define.args = function(argu){
-	var arg, args = {};
-	for (var i = 0; i < argu.length; i++){
-		arg = argu[i];
-		if (is.str(arg))
-			args.id = arg;
-		else if (is.arr(arg))
-			args.deps = arg;
-		else if (is.fn(arg))
-			args.factory = arg;
-		else
-			console.warn("whoops");
-	}
-	return args;
-};
-
-define.requests = function(){
-	define.log.g("define.requests", function(){
-		define.log.timeEnd("define.requests timeout");
-		for (var i in define.modules){
-			define.modules[i].request();
+define.assign({
+	log: log,
+	debug: log.off,
+	modules: {},
+	moduleRoot: "modules",
+	Module: Module, // see .get()
+	delayRequests: function(){
+		define.debug.time("define.requests timeout");
+		if (define.delayRequestsTimeout){
+			clearTimeout(define.delayRequestsTimeout);
 		}
-	});
-};
+		define.delayRequestsTimeout = setTimeout(define.requests, 0);
+	},
+	get: function(id){
+		return (define.modules[id] = define.modules[id] || new define.Module(id));
+	},
+	args: function(argu){
+		var arg, args = {};
+		for (var i = 0; i < argu.length; i++){
+			arg = argu[i];
+			if (is.str(arg))
+				args.id = arg;
+			else if (is.arr(arg))
+				args.deps = arg;
+			else if (is.fn(arg))
+				args.factory = arg;
+			else
+				console.error("whoops");
+		}
+		return args;
+	},
+	requests: function(){
+		define.debug.g("define.requests", function(){
+			define.debug.timeEnd("define.requests timeout");
+			for (var i in define.modules){
+				define.modules[i].request();
+			}
+		});
+	},
+	resolve: function(id){
+		var parts = id.split("/"); // id could be //something.com/something/?
+		if (id[id.length-1] === "/"){
+			// ends in "/", mimic last part
+			id = id + parts[parts.length-2] + ".js";
+		} else if (parts[parts.length-1].indexOf(".js") < 0){
+			// only supports .js files
+			id = id + ".js";
+		}
 
-/*
+		// convert non-absolute paths to moduleRoot paths
+		if (id[0] !== "/"){
+			id = "/" + define.moduleRoot + "/" + id;
+		}
 
-"thing" --> moduleRoot + /thing.js
-"thing.js" --> moduleRoot + /thing.js
-"thing.css" --> moduleRoot + /thing.css?
-
-"thing/" --> moduleRoot/ + thing/thing.js
-"one/two/three/thing/" --> moduleRoot/ + one/two/three/thing/thing.js
-
-"/thing" --> /thing.js
-"/thing.js" --> /thing.js"
-"/thing.css" --> /thing.css
-
-"/thing/" --> /thing/thing.js
-"one/t"
-
-"thing-0.1.2"
-
-*/
-define.resolve = function(id){
-	var parts = id.split("/"); // id could be //something.com/something/?
-	if (id[id.length-1] === "/"){
-		id = id + parts[parts.length-2] + ".js";
-	} else if (parts[parts.length-1].indexOf(".js") < 0){
-		id = id + ".js";
+		return id;
 	}
+});
 
-	if (id[0] !== "/"){
-		id = "/" + define.moduleRoot + "/" + id;
-	}
 
-	return id;
-};
+// define.Base = Base;
+define.log = define.log.off;
+define("Base", function(){
+	return Base;
+});
 
-// [
-// 	{
-// 		id: "thing",
-// 		url: "/modules/thing.js"
-// 	},
-// 	{
-// 		id: "thing.js",
-// 		url: "/modules/thing.js"
-// 	},
-// 	{
-// 		id: "thing-0.1",
-// 		url: "/modules/thing-0.1.js"
-// 	},
-// 	{
-// 		id: "thing-0.1/",
-// 		url: "/modules/thing-0.1/thing-0.1.js"
-// 	},
-// 	{
-// 		id: "/thing",
-// 		url: "/thing.js"
-// 	},
-// 	{
-// 		id: "/thing-0.1",
-// 		url: "/thing-0.1.js"
-// 	},
-// 	{
-// 		id: "/thing.js",
-// 		url: "/thing.js"
-// 	},
-// 	{
-// 		id: "/thing-0.1.js",
-// 		url: "/thing-0.1.js"
-// 	},
-// 	{
-// 		id: "/thing/",
-// 		url: "/thing/thing.js"
-// 	},
-// 	{
-// 		id: "/thing-0.1/",
-// 		url: "/thing-0.1/thing-0.1.js"
-// 	}
-// ].forEach((test)=>{
-// 	console.assert(define.resolve(test.id) === test.url);
-// 	console.log("done");
-// });
+define("is", function(){
+	return is;
+});
+
+define("log", function(){
+	return log;
+});
+define.log = define.log.on;
+
+
 
 })();
