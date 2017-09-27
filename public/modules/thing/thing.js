@@ -1,4 +1,4 @@
-define("thing/", ["Test/", "View/"], function(Test, View){
+define("thing/", ["View/"], function(View){
 
 var Thing = 123;
 

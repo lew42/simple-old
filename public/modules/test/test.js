@@ -1,4 +1,7 @@
-define("Test/", ["Base2/", "View/"], function(Base2, View){
+define("test/", ["Base2/", "View/"], function(Base2, View){
+
+var stylesheet = View({tag: "link"}).attr("rel", "stylesheet").attr("href", "/modules/test/test.styles.css");
+document.head.appendChild(stylesheet.el);
 
 /*
 instead of trying to use a view, and have view.name and view.$name, which doesn't work very well with the .append({pojo}) method...
@@ -23,7 +26,6 @@ var Test = Base2.extend({
 		this.pass = 0;
 		this.fail = 0;
 
-		this.activate.bind(this);
 		this.container = this.container || body;
 
 		this.initialize();
@@ -34,10 +36,7 @@ var Test = Base2.extend({
 	},
 	render: function(){
 		this.view = View().addClass('test').append({
-			bar: {
-				name: this.label(),
-				run: View({tag:"button"}, "run").click(this.activate)
-			},
+			bar: View(this.label()).click(this.activate.bind(this)),
 			content: View(),
 			footer: View()
 		});
@@ -59,16 +58,16 @@ var Test = Base2.extend({
 			
 			Test.set_captor(this);
 
-			this.content.append(function(){
+			this.view.content.append(function(){
 				this.fn();
 			}.bind(this));
 
 			Test.restore_captor();
 			
 			if (this.pass > 0)
-				this.footer.append("Passed " + this.pass);
+				this.view.footer.append("Passed " + this.pass);
 			if (this.fail > 0)
-				this.footer.append("Failed " + this.fail);
+				this.view.footer.append("Failed " + this.fail);
 			console.groupEnd();
 		}
 	},
@@ -102,6 +101,16 @@ Test.assign({
 			Test.captor.assert(value);
 		else
 			console.error("whoops");
+	},
+	controls: function(){
+		var controls = View().addClass("test-controls").append({
+			reset: View({tag:"button"}, "reset").click(function(){
+				// window.location.hash = "";
+				// window.location.reload();
+				window.location.href = window.location.href.split('#')[0]
+			})
+		});
+		document.body.appendChild(controls.el);
 	}
 });
 
