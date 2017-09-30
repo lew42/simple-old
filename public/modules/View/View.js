@@ -8,10 +8,8 @@ var View = Base2.extend({
 	initialize: function(){
 		if (!this.el) this.render_el();
 		this.render();
-		this.update();
 	},
 	render: function(){},
-	update: function(){},
 	render_el: function(){
 		if (!this.el){
 			this.tag = this.tag || "div";
