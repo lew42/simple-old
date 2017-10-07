@@ -37,10 +37,11 @@ Base.extend = function(){
 
 var Module = Base.extend({
 	instantiate: function(id){
+		this.id = id;
+		
 		this.log = define.log;
 		this.debug = define.debug;
 
-		this.id = id;
 		this.deps = []; // dependencies (Module instances)
 		this.dependents = [];
 
